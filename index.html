@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>تلاوات القرآن الكريم</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    --ink:#0f2b24; --paper:#f6f1e4; --paper2:#efe6d0; --gold:#b6862c; --gold-l:#d9ad5c;
+    --teal:#0f4c42; --teal-d:#0a352e; --line:#d8ccab;
+    box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  html{scroll-padding-top:env(safe-area-inset-top,0px)}
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){ --ink:#f3ead2; --paper:#0e1a17; --paper2:#122420; --line:#1f3a33; }
+  }
+  :root[data-theme="dark"]{ --ink:#f3ead2; --paper:#0e1a17; --paper2:#122420; --line:#1f3a33; }
+  html,body{height:100%}
+  body{ background:var(--paper); color:var(--ink); font-family:'Tajawal',sans-serif; }
+  .amiri{ font-family:'Amiri', serif; }
+  .card{ background:var(--paper2); border:1px solid var(--line); }
+  .btn-gold{ background:var(--gold); color:#241a05; }
+  .btn-gold:hover{ background:var(--gold-l); }
+  ::-webkit-scrollbar{ height:8px; width:8px; }
+  ::-webkit-scrollbar-thumb{ background:var(--line); border-radius:4px; }
+  input:focus{ outline:2px solid var(--gold); }
+  button:focus-visible, a:focus-visible, [tabindex]:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+  .rot-active{ box-shadow: inset 0 0 0 2px var(--gold); }
+  .ayah-active{ background: color-mix(in srgb, var(--gold) 18%, transparent); }
+  .verse-text{ font-family:'Amiri', serif; line-height:2.4; }
+</style>
+</head>
+<body class="min-h-full flex flex-col">
+
+<header class="border-b" style="border-color:var(--line)">
+  <div class="max-w-5xl mx-auto px-4 pt-6 pb-4">
+    <div class="flex items-center justify-between gap-3">
+      <div>
+        <h1 class="amiri text-3xl md:text-4xl font-bold" style="color:var(--gold)">تلاوات القرآن الكريم</h1>
+        <p class="text-sm opacity-70 mt-1">استمع لتلاوات نخبة من القرّاء، وتصفّح الآيات آيةً آيةً</p>
+      </div>
+      <button id="themeBtn" class="card rounded-full w-10 h-10 flex items-center justify-center text-lg shrink-0" title="تبديل المظهر">🌓</button>
+    </div>
+    <div class="mt-4 relative">
+      <input id="search" type="text" placeholder="ابحث عن سورة أو قارئ…"
+        class="w-full rounded-xl px-4 py-3 bg-transparent card text-base"/>
+    </div>
+    <div id="crumbs" class="mt-3 text-sm opacity-70 hidden"></div>
+  </div>
+</header>
+
+<main class="flex-1 max-w-5xl w-full mx-auto px-4 py-5 pb-32">
+  <!-- Reciters grid -->
+  <section id="reciterView">
+    <h2 class="amiri text-xl mb-3" style="color:var(--gold)">القرّاء</h2>
+    <div id="reciterGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
+  </section>
+
+  <!-- Surah list for a chosen reciter -->
+  <section id="surahView" class="hidden">
+    <button id="backBtn" class="mb-4 text-sm px-3 py-1.5 rounded-lg card">→ رجوع إلى القرّاء</button>
+    <h2 id="surahHeading" class="amiri text-xl mb-3" style="color:var(--gold)"></h2>
+    <div id="surahGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+  </section>
+
+  <!-- Ayah detail view -->
+  <section id="ayahView" class="hidden">
+    <button id="backToSurahsBtn" class="mb-4 text-sm px-3 py-1.5 rounded-lg card">→ رجوع إلى السور</button>
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+      <h2 id="ayahHeading" class="amiri text-xl" style="color:var(--gold)"></h2>
+      <div class="flex gap-2">
+        <button id="playFullBtn" class="btn-gold rounded-lg px-3 py-2 text-sm">▶ تشغيل السورة كاملة</button>
+        <a id="downloadFullLink" class="card rounded-lg px-3 py-2 text-sm" download>⬇ تحميل السورة</a>
+      </div>
+    </div>
+    <div class="card rounded-lg px-4 py-3 mb-4 flex flex-wrap items-center gap-3">
+      <span class="text-sm opacity-70">تشغيل نطاق من الآيات:</span>
+      <label class="flex items-center gap-1 text-sm">من
+        <select id="rangeFrom" class="rounded-md px-2 py-1 bg-transparent card"></select>
+      </label>
+      <label class="flex items-center gap-1 text-sm">إلى
+        <select id="rangeTo" class="rounded-md px-2 py-1 bg-transparent card"></select>
+      </label>
+      <button id="playRangeBtn" class="btn-gold rounded-lg px-3 py-1.5 text-sm">▶ تشغيل النطاق تلقائيًا</button>
+      <button id="mergeRangeBtn" class="card rounded-lg px-3 py-1.5 text-sm">🔗 دمج النطاق في ملف واحد</button>
+      <a id="downloadMergedLink" class="card rounded-lg px-3 py-1.5 text-sm hidden" download>⬇ تحميل الملف المدمج</a>
+    </div>
+    <p id="ayahStatus" class="text-sm opacity-60 mb-2"></p>
+    <div id="ayahList" class="space-y-2"></div>
+  </section>
+
+  <!-- Search results -->
+  <section id="searchView" class="hidden">
+    <h2 class="amiri text-xl mb-3" style="color:var(--gold)">نتائج البحث</h2>
+    <div id="searchResults" class="space-y-2"></div>
+  </section>
+</main>
+
+<!-- Player -->
+<div id="player" class="fixed bottom-0 inset-x-0 hidden card border-t backdrop-blur"
+     style="border-color:var(--line); padding-bottom:calc(env(safe-area-inset-bottom,0px) + 10px)">
+  <div class="max-w-5xl mx-auto px-4 pt-3">
+    <div class="flex items-center gap-3">
+      <button id="playBtn" class="btn-gold rounded-full w-11 h-11 flex items-center justify-center text-xl shrink-0">▶</button>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center justify-between text-sm mb-1">
+          <span id="npSurah" class="font-bold truncate"></span>
+          <span id="npReciter" class="opacity-70 truncate ms-2"></span>
+        </div>
+        <input id="seek" type="range" min="0" max="100" value="0" class="w-full" style="accent-color:var(--gold)">
+        <div class="flex justify-between text-xs opacity-60 mt-0.5">
+          <span id="curTime">٠:٠٠</span><span id="durTime">٠:٠٠</span>
+        </div>
+      </div>
+      <button id="prevBtn" class="w-9 h-9 rounded-full card flex items-center justify-center shrink-0">›</button>
+      <button id="nextBtn" class="w-9 h-9 rounded-full card flex items-center justify-center shrink-0">‹</button>
+      <a id="downloadCurLink" class="w-9 h-9 rounded-full card flex items-center justify-center shrink-0" download title="تحميل">⬇</a>
+    </div>
+  </div>
+</div>
+<audio id="audio" preload="none"></audio>
+
+<script>
+const RECITERS = [
+  {id:'ar.alafasy', ayah:'Alafasy_128kbps', name:'مشاري راشد العفاسي'},
+  {id:'ar.abdulbasitmurattal', ayah:'Abdul_Basit_Murattal_192kbps', name:'عبد الباسط عبد الصمد'},
+  {id:'ar.abdurrahmaansudais', ayah:'Abdurrahmaan_As-Sudais_192kbps', name:'عبد الرحمن السديس'},
+  {id:'ar.saoodshuraym', ayah:'Saood_ash-Shuraym_128kbps', name:'سعود الشريم'},
+  {id:'ar.mahermuaiqly', ayah:'MaherAlMuaiqly128kbps', name:'ماهر المعيقلي'},
+  {id:'ar.husary', ayah:'Husary_128kbps', name:'محمود خليل الحصري'},
+  {id:'ar.minshawi', ayah:'Minshawy_Murattal_128kbps', name:'محمد صديق المنشاوي'},
+  {id:'ar.hanirifai', ayah:'Hani_Rifai_192kbps', name:'هاني الرفاعي'},
+  {id:'ar.ahmedajamy', ayah:'Ahmed_ibn_Ali_al-Ajamy_128kbps', name:'أحمد بن علي العجمي'},
+  {id:'ar.hudhaify', ayah:'Hudhaify_128kbps', name:'علي بن عبدالرحمن الحذيفي'},
+];
+
+const SURAH_NAMES = "الفاتحة,البقرة,آل عمران,النساء,المائدة,الأنعام,الأعراف,الأنفال,التوبة,يونس,هود,يوسف,الرعد,إبراهيم,الحجر,النحل,الإسراء,الكهف,مريم,طه,الأنبياء,الحج,المؤمنون,النور,الفرقان,الشعراء,النمل,القصص,العنكبوت,الروم,لقمان,السجدة,الأحزاب,سبأ,فاطر,يس,الصافات,ص,الزمر,غافر,فصلت,الشورى,الزخرف,الدخان,الجاثية,الأحقاف,محمد,الفتح,الحجرات,ق,الذاريات,الطور,النجم,القمر,الرحمن,الواقعة,الحديد,المجادلة,الحشر,الممتحنة,الصف,الجمعة,المنافقون,التغابن,الطلاق,التحريم,الملك,القلم,الحاقة,المعارج,نوح,الجن,المزمل,المدثر,القيامة,الإنسان,المرسلات,النبأ,النازعات,عبس,التكوير,الانفطار,المطففين,الانشقاق,البروج,الطارق,الأعلى,الغاشية,الفجر,البلد,الشمس,الليل,الضحى,الشرح,التين,العلق,القدر,البينة,الزلزلة,العاديات,القارعة,التكاثر,العصر,الهمزة,الفيل,قريش,الماعون,الكوثر,الكافرون,النصر,المسد,الإخلاص,الفلق,الناس".split(',');
+const AYAH_COUNTS = [7,286,200,176,120,165,206,75,129,109,123,111,43,52,99,128,111,110,98,135,112,78,118,64,77,227,93,88,69,60,34,30,73,54,45,83,182,88,75,85,54,53,89,59,37,35,38,29,18,45,60,49,62,55,78,96,29,22,24,13,14,11,11,18,12,12,30,52,52,44,28,28,20,56,40,31,50,40,46,42,29,19,36,25,22,17,19,26,30,20,15,21,11,8,8,19,5,8,8,11,11,8,3,9,5,4,7,3,6,3,5,4,5,6];
+const SURAHS = SURAH_NAMES.map((n,i)=>({num:i+1, name:n, ayahs:AYAH_COUNTS[i]}));
+
+function surahUrl(reciterId, surahNum){
+  return `https://cdn.islamic.network/quran/audio-surah/128/${reciterId}/${surahNum}.mp3`;
+}
+function ayahUrl(reciter, surahNum, ayahNum){
+  const s = String(surahNum).padStart(3,'0'), a = String(ayahNum).padStart(3,'0');
+  return `https://everyayah.com/data/${reciter.ayah}/${s}${a}.mp3`;
+}
+
+const state = { reciter:null, mode:'surah', surahNum:1, ayahNum:1, rangeFrom:1, rangeTo:1 };
+
+const el = id => document.getElementById(id);
+const reciterGrid = el('reciterGrid'), surahGrid = el('surahGrid'), surahHeading = el('surahHeading');
+const reciterView = el('reciterView'), surahView = el('surahView'), searchView = el('searchView'), ayahView = el('ayahView');
+const crumbs = el('crumbs'), searchResults = el('searchResults');
+const audio = el('audio'), playBtn = el('playBtn'), seek = el('seek');
+const npSurah = el('npSurah'), npReciter = el('npReciter'), curTime = el('curTime'), durTime = el('durTime');
+const ayahHeading = el('ayahHeading'), ayahList = el('ayahList'), ayahStatus = el('ayahStatus');
+const downloadFullLink = el('downloadFullLink'), downloadCurLink = el('downloadCurLink');
+const rangeFromSel = el('rangeFrom'), rangeToSel = el('rangeTo'), playRangeBtn = el('playRangeBtn');
+const mergeRangeBtn = el('mergeRangeBtn'), downloadMergedLink = el('downloadMergedLink');
+
+function renderReciters(){
+  reciterGrid.innerHTML = RECITERS.map(r=>`
+    <button data-id="${r.id}" class="reciterCard card rounded-xl p-4 text-right hover:rot-active transition">
+      <div class="text-2xl mb-1">🕌</div>
+      <div class="font-bold">${r.name}</div>
+      <div class="text-xs opacity-60 mt-1">١١٤ سورة</div>
+    </button>`).join('');
+  reciterGrid.querySelectorAll('.reciterCard').forEach(b=>{
+    b.addEventListener('click', ()=> openReciter(b.dataset.id));
+  });
+}
+
+function openReciter(id){
+  const r = RECITERS.find(x=>x.id===id);
+  state.reciter = r;
+  surahHeading.textContent = `سور بصوت ${r.name}`;
+  surahGrid.innerHTML = SURAHS.map(s=>`
+    <div class="surahRow card rounded-lg px-3 py-2 flex items-center justify-between gap-2">
+      <button data-num="${s.num}" class="openAyahs flex items-center gap-3 text-right flex-1 min-w-0">
+        <span class="opacity-60 text-sm w-6 shrink-0">${s.num}</span>
+        <span class="truncate">${s.name}</span>
+        <span class="opacity-50 text-xs shrink-0">(${s.ayahs} آية)</span>
+      </button>
+      <button data-num="${s.num}" class="quickPlay w-8 h-8 rounded-full btn-gold flex items-center justify-center text-sm shrink-0" title="تشغيل السورة">▶</button>
+      <a data-num="${s.num}" class="quickDl w-8 h-8 rounded-full card flex items-center justify-center text-sm shrink-0" download title="تحميل">⬇</a>
+    </div>`).join('');
+  surahGrid.querySelectorAll('.openAyahs').forEach(b=> b.addEventListener('click', ()=> openAyahDetail(r, parseInt(b.dataset.num))));
+  surahGrid.querySelectorAll('.quickPlay').forEach(b=> b.addEventListener('click', ()=> playSurahFull(r, parseInt(b.dataset.num))));
+  surahGrid.querySelectorAll('.quickDl').forEach(b=>{
+    const num = parseInt(b.dataset.num);
+    b.href = surahUrl(r.id, num);
+    const s = SURAHS[num-1];
+    b.setAttribute('download', `${num}-${s.name}-${r.name}.mp3`);
+  });
+  reciterView.classList.add('hidden');
+  searchView.classList.add('hidden');
+  ayahView.classList.add('hidden');
+  surahView.classList.remove('hidden');
+  crumbs.classList.remove('hidden');
+  crumbs.textContent = `القرّاء ← ${r.name}`;
+}
+
+el('backBtn').addEventListener('click', ()=>{
+  surahView.classList.add('hidden');
+  reciterView.classList.remove('hidden');
+  crumbs.classList.add('hidden');
+});
+el('backToSurahsBtn').addEventListener('click', ()=>{
+  ayahView.classList.add('hidden');
+  surahView.classList.remove('hidden');
+});
+
+function playSurahFull(reciter, num){
+  state.reciter = reciter; state.mode = 'surah'; state.surahNum = num;
+  const s = SURAHS[num-1];
+  loadTrack(surahUrl(reciter.id, num), `${s.num}. ${s.name}`, reciter.name, `${num}-${s.name}-${reciter.name}.mp3`);
+}
+
+function playAyah(reciter, surahNum, ayahNum, keepMode){
+  state.reciter = reciter; state.surahNum = surahNum; state.ayahNum = ayahNum;
+  if(!keepMode) state.mode = 'ayah';
+  const s = SURAHS[surahNum-1];
+  const label = state.mode==='range' ? `${s.name} — الآية ${ayahNum} (نطاق ${state.rangeFrom}-${state.rangeTo})` : `${s.name} — الآية ${ayahNum}`;
+  loadTrack(ayahUrl(reciter, surahNum, ayahNum), label, reciter.name, `${surahNum}-${ayahNum}-${reciter.name}.mp3`);
+  ayahList.querySelectorAll('.ayahRow').forEach(row=> row.classList.toggle('ayah-active', parseInt(row.dataset.ayah)===ayahNum));
+}
+
+function playRange(reciter, surahNum, from, to){
+  state.mode = 'range'; state.rangeFrom = from; state.rangeTo = to;
+  playAyah(reciter, surahNum, from, true);
+}
+
+function toMono(buffer){
+  if(buffer.numberOfChannels===1) return buffer.getChannelData(0).slice();
+  const ch0=buffer.getChannelData(0), ch1=buffer.getChannelData(1);
+  const out = new Float32Array(buffer.length);
+  for(let i=0;i<buffer.length;i++) out[i] = (ch0[i]+ch1[i])/2;
+  return out;
+}
+function writeStr(view, offset, str){ for(let i=0;i<str.length;i++) view.setUint8(offset+i, str.charCodeAt(i)); }
+function encodeWAV(samples, sampleRate){
+  const buffer = new ArrayBuffer(44 + samples.length*2);
+  const view = new DataView(buffer);
+  writeStr(view,0,'RIFF'); view.setUint32(4, 36+samples.length*2, true); writeStr(view,8,'WAVE');
+  writeStr(view,12,'fmt '); view.setUint32(16,16,true); view.setUint16(20,1,true); view.setUint16(22,1,true);
+  view.setUint32(24,sampleRate,true); view.setUint32(28,sampleRate*2,true); view.setUint16(32,2,true); view.setUint16(34,16,true);
+  writeStr(view,36,'data'); view.setUint32(40, samples.length*2, true);
+  let off = 44;
+  for(let i=0;i<samples.length;i++,off+=2){
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(off, s<0 ? s*0x8000 : s*0x7FFF, true);
+  }
+  return new Blob([view], {type:'audio/wav'});
+}
+
+async function mergeAndPlayRange(reciter, surahNum, from, to){
+  const nums = []; for(let i=from;i<=to;i++) nums.push(i);
+  mergeRangeBtn.disabled = true; mergeRangeBtn.textContent = '⏳ جارٍ الدمج…';
+  downloadMergedLink.classList.add('hidden');
+  const s = SURAHS[surahNum-1];
+  try{
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const buffers = [];
+    for(let i=0;i<nums.length;i++){
+      ayahStatus.textContent = `جاري تحميل الآيات (${i+1} من ${nums.length})…`;
+      const res = await fetch(ayahUrl(reciter, surahNum, nums[i]));
+      if(!res.ok) throw new Error('fetch failed');
+      const arr = await res.arrayBuffer();
+      buffers.push(await ctx.decodeAudioData(arr));
+    }
+    const sr = ctx.sampleRate;
+    const gap = new Float32Array(Math.floor(sr*0.35));
+    let total = gap.length*(buffers.length-1);
+    buffers.forEach(b=> total += b.length);
+    const merged = new Float32Array(total);
+    let offset = 0;
+    buffers.forEach((b,i)=>{
+      const mono = toMono(b);
+      merged.set(mono, offset); offset += mono.length;
+      if(i<buffers.length-1){ merged.set(gap, offset); offset += gap.length; }
+    });
+    const blob = encodeWAV(merged, sr);
+    if(state.mergedUrl) URL.revokeObjectURL(state.mergedUrl);
+    const url = URL.createObjectURL(blob);
+    state.mergedUrl = url; state.mode = 'mergedRange';
+    const dlName = `${surahNum}-${from}-${to}-${reciter.name}.wav`;
+    loadTrack(url, `${s.name} — آيات ${from}-${to} (مدمجة في ملف واحد)`, reciter.name, dlName);
+    downloadMergedLink.href = url; downloadMergedLink.setAttribute('download', dlName);
+    downloadMergedLink.classList.remove('hidden');
+    ayahStatus.textContent = `تم دمج ${nums.length} آية في ملف صوتي واحد بنجاح.`;
+    ctx.close();
+  }catch(e){
+    ayahStatus.textContent = 'تعذّر دمج الملفات الصوتية، غالبًا لأن خادم الصوت يمنع الوصول المباشر (CORS). جرّب "تشغيل النطاق تلقائيًا" بدل الدمج، أو نزّل كل آية على حدة.';
+  }
+  mergeRangeBtn.disabled = false; mergeRangeBtn.textContent = '🔗 دمج النطاق في ملف واحد';
+}
+
+function loadTrack(src, title, reciterName, dlName){
+  audio.src = src;
+  npSurah.textContent = title;
+  npReciter.textContent = reciterName;
+  downloadCurLink.href = src;
+  downloadCurLink.setAttribute('download', dlName);
+  el('player').classList.remove('hidden');
+  audio.play().then(()=>{playBtn.textContent='⏸';}).catch(()=>{playBtn.textContent='▶';});
+}
+
+playBtn.addEventListener('click', ()=>{
+  if(!audio.src) return;
+  if(audio.paused){ audio.play(); playBtn.textContent='⏸'; }
+  else { audio.pause(); playBtn.textContent='▶'; }
+});
+el('nextBtn').addEventListener('click', ()=>{
+  if(state.mode==='mergedRange') return;
+  if(state.mode==='range'){
+    if(state.ayahNum < state.rangeTo) playAyah(state.reciter, state.surahNum, state.ayahNum+1, true);
+  } else if(state.mode==='ayah'){
+    const count = SURAHS[state.surahNum-1].ayahs;
+    if(state.ayahNum < count) playAyah(state.reciter, state.surahNum, state.ayahNum+1);
+  } else if(state.surahNum < 114){ playSurahFull(state.reciter, state.surahNum+1); }
+});
+el('prevBtn').addEventListener('click', ()=>{
+  if(state.mode==='mergedRange') return;
+  if(state.mode==='range'){
+    if(state.ayahNum > state.rangeFrom) playAyah(state.reciter, state.surahNum, state.ayahNum-1, true);
+  } else if(state.mode==='ayah'){
+    if(state.ayahNum > 1) playAyah(state.reciter, state.surahNum, state.ayahNum-1);
+  } else if(state.surahNum > 1){ playSurahFull(state.reciter, state.surahNum-1); }
+});
+audio.addEventListener('ended', ()=>{
+  if(state.mode==='mergedRange') return;
+  if(state.mode==='range' && state.ayahNum >= state.rangeTo){
+    playBtn.textContent = '▶';
+    ayahStatus.textContent = 'انتهى تشغيل النطاق المحدّد.';
+    return;
+  }
+  el('nextBtn').click();
+});
+
+function fmt(t){
+  if(!isFinite(t)) return '٠:٠٠';
+  const m = Math.floor(t/60), s = Math.floor(t%60);
+  return `${m}:${s.toString().padStart(2,'0')}`;
+}
+audio.addEventListener('timeupdate', ()=>{
+  seek.value = audio.duration ? (audio.currentTime/audio.duration*100) : 0;
+  curTime.textContent = fmt(audio.currentTime);
+  durTime.textContent = fmt(audio.duration);
+});
+seek.addEventListener('input', ()=>{
+  if(audio.duration) audio.currentTime = (seek.value/100)*audio.duration;
+});
+
+// Ayah detail view: shows every ayah with its own play + download, and fetches verse text live
+async function openAyahDetail(reciter, surahNum){
+  state.reciter = reciter; state.surahNum = surahNum;
+  const s = SURAHS[surahNum-1];
+  ayahHeading.textContent = `${s.name} — بصوت ${reciter.name}`;
+  downloadFullLink.href = surahUrl(reciter.id, surahNum);
+  downloadFullLink.setAttribute('download', `${surahNum}-${s.name}-${reciter.name}.mp3`);
+  el('playFullBtn').onclick = ()=> playSurahFull(reciter, surahNum);
+
+  const opts = Array.from({length:s.ayahs}, (_,i)=> `<option value="${i+1}">${i+1}</option>`).join('');
+  rangeFromSel.innerHTML = opts;
+  rangeToSel.innerHTML = opts;
+  rangeToSel.value = String(s.ayahs);
+  playRangeBtn.onclick = ()=>{
+    const from = parseInt(rangeFromSel.value), to = parseInt(rangeToSel.value);
+    if(from > to){ ayahStatus.textContent = 'الآية الأولى يجب أن تكون قبل الآية الأخيرة أو تساويها.'; return; }
+    playRange(reciter, surahNum, from, to);
+  };
+  mergeRangeBtn.onclick = ()=>{
+    const from = parseInt(rangeFromSel.value), to = parseInt(rangeToSel.value);
+    if(from > to){ ayahStatus.textContent = 'الآية الأولى يجب أن تكون قبل الآية الأخيرة أو تساويها.'; return; }
+    mergeAndPlayRange(reciter, surahNum, from, to);
+  };
+  downloadMergedLink.classList.add('hidden');
+
+  ayahStatus.textContent = 'جاري تحميل نص الآيات…';
+  ayahList.innerHTML = Array.from({length:s.ayahs}, (_,i)=>{
+    const n = i+1;
+    return `<div class="ayahRow card rounded-lg px-4 py-3" data-ayah="${n}">
+      <div class="flex items-start justify-between gap-3">
+        <p class="verse-text text-lg flex-1" data-text="${n}">﴿ ... ﴾ <span class="opacity-50 text-sm">(${n})</span></p>
+        <div class="flex gap-2 shrink-0">
+          <button data-play="${n}" class="w-8 h-8 rounded-full btn-gold flex items-center justify-center text-sm">▶</button>
+          <a data-dl="${n}" class="w-8 h-8 rounded-full card flex items-center justify-center text-sm" download>⬇</a>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  ayahList.querySelectorAll('[data-play]').forEach(b=>{
+    b.addEventListener('click', ()=> playAyah(reciter, surahNum, parseInt(b.dataset.play)));
+  });
+  ayahList.querySelectorAll('[data-dl]').forEach(a=>{
+    const n = parseInt(a.dataset.dl);
+    a.href = ayahUrl(reciter, surahNum, n);
+    a.setAttribute('download', `${surahNum}-${n}-${reciter.name}.mp3`);
+  });
+
+  surahView.classList.add('hidden');
+  reciterView.classList.add('hidden');
+  searchView.classList.add('hidden');
+  ayahView.classList.remove('hidden');
+  crumbs.classList.remove('hidden');
+  crumbs.textContent = `القرّاء ← ${reciter.name} ← ${s.name}`;
+
+  try{
+    const res = await fetch(`https://api.alquran.cloud/v1/surah/${surahNum}/quran-uthmani`);
+    if(!res.ok) throw new Error('bad response');
+    const data = await res.json();
+    data.data.ayahs.forEach(a=>{
+      const p = ayahList.querySelector(`[data-text="${a.numberInSurah}"]`);
+      if(p) p.innerHTML = `${a.text} <span class="opacity-50 text-sm">(${a.numberInSurah})</span>`;
+    });
+    ayahStatus.textContent = '';
+  }catch(e){
+    ayahStatus.textContent = 'تعذّر تحميل نصوص الآيات هنا بسبب قيود الشبكة في هذا العرض — التشغيل والتحميل الصوتي يعملان بشكل طبيعي، وسيظهر النص أيضًا إذا فتحت الملف المحمَّل في متصفحك مباشرة.';
+  }
+}
+
+// Search
+const search = el('search');
+search.addEventListener('input', ()=>{
+  const q = search.value.trim();
+  if(!q){
+    searchView.classList.add('hidden');
+    if(surahView.classList.contains('hidden') && ayahView.classList.contains('hidden')) reciterView.classList.remove('hidden');
+    return;
+  }
+  reciterView.classList.add('hidden');
+  surahView.classList.add('hidden');
+  ayahView.classList.add('hidden');
+  searchView.classList.remove('hidden');
+  crumbs.classList.add('hidden');
+
+  const matchedReciters = RECITERS.filter(r=> r.name.includes(q));
+  const matchedSurahs = SURAHS.filter(s=> s.name.includes(q) || String(s.num)===q);
+
+  let html = '';
+  if(matchedReciters.length){
+    html += `<div class="text-sm opacity-60 mb-1">القرّاء</div>`;
+    html += matchedReciters.map(r=>`
+      <button data-r="${r.id}" class="goReciter card w-full rounded-lg px-4 py-3 text-right block">🕌 ${r.name}</button>`).join('');
+  }
+  if(matchedSurahs.length){
+    html += `<div class="text-sm opacity-60 mt-4 mb-1">السور (اختر قارئاً بعدها)</div>`;
+    html += matchedSurahs.map(s=>`
+      <button data-s="${s.num}" class="goSurah card w-full rounded-lg px-4 py-3 text-right block">${s.num}. ${s.name}</button>`).join('');
+  }
+  if(!matchedReciters.length && !matchedSurahs.length){
+    html = `<p class="opacity-60">لا توجد نتائج مطابقة.</p>`;
+  }
+  searchResults.innerHTML = html;
+  searchResults.querySelectorAll('.goReciter').forEach(b=>{
+    b.addEventListener('click', ()=>{ search.value=''; openReciter(b.dataset.r); });
+  });
+  searchResults.querySelectorAll('.goSurah').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const num = parseInt(b.dataset.s);
+      const reciter = state.reciter || RECITERS[0];
+      search.value='';
+      openReciter(reciter.id);
+      openAyahDetail(reciter, num);
+    });
+  });
+});
+
+// Theme toggle
+el('themeBtn').addEventListener('click', ()=>{
+  const cur = document.documentElement.getAttribute('data-theme');
+  document.documentElement.setAttribute('data-theme', cur==='dark' ? 'light' : 'dark');
+});
+
+renderReciters();
+</script>
+</body>
+</html>
